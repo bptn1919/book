@@ -52,7 +52,7 @@ image_context_interaction [style + system instructions]
 
 Portrait reuse for illustrations: the image chain is continued from the last portrait interaction. The model references its own history for character consistency.
 
-## Pipeline State (to be finalized in DECISION 3)
+## Pipeline State (DECISION 3)
 
 Status values: `CREATED → STYLE_SET → CHARACTERS_GENERATED → PORTRAITS_GENERATED → CHAPTERS_GENERATED → DONE`
 
