@@ -25,5 +25,5 @@ The candidate reviewed every proposal before it was accepted, modified several, 
 ## Models
 
 - Text generation: `gemini-3.6-flash` (Gemini API, via google-genai SDK)
-- Image generation: `gemini-3.1-flash-lite-image` (Nano Banana family, via google-genai SDK)
+- Image generation: `gemini-2.5-flash-image` (free-tier image model, via google-genai SDK)
 - Coding assistant: `claude-sonnet-4-6` (Anthropic, via Claude Code CLI)

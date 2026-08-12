@@ -52,13 +52,13 @@ Phase 0 complete. DECISION 1 (Stack) complete. DECISION 2 pending.
 1. **Duplicate execution**: server-side locking required (DECISION 4)
 2. **Stuck steps**: stale threshold must be > 30s (real Gemini call duration) + SDK retry time (up to 5 × 60s = 5 min in worst case)
 3. **Book File API TTL**: unknown how long uploaded files persist — need to verify
-4. **Image model rate limits**: unknown for `gemini-3.1-flash-lite-image` — verify before integration
+4. **Image model rate limits**: verify the selected free-tier image model before integration
 
 ## Unknowns Still Open
 
 - REST endpoint shape for Interactions API (needed if SDK gaps found)
 - File API TTL (affects whether we need to re-upload the book if it expires)
-- Free-tier limits for `gemini-3.1-flash-lite-image`
+- Free-tier limits for the selected image model
 
 ## Implementation Order (planned, subject to approval)
 

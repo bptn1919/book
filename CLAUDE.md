@@ -41,7 +41,7 @@ book_interaction [File API upload → book.uri]
               └── chapters_prompts_interaction [JSON: [{name, prompt}]]
 ```
 
-**Image chain** (IMAGE_MODEL_ID = `gemini-3.1-flash-lite-image`):
+**Image chain** (IMAGE_MODEL_ID = `gemini-2.5-flash-image`):
 ```
 image_context_interaction [style + system instructions]
   └── portrait_interaction_1 [character[0]]

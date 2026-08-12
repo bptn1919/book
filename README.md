@@ -10,7 +10,7 @@ Five sequential, user-driven steps: **Style → Characters → Portraits → Cha
 
 - Python 3.12+
 - Node.js 20+
-- A Gemini API key (free tier works; note image-model rate limits)
+- A Gemini API key (free tier works; image model now targets `gemini-2.5-flash-image`)
 
 ---
 
@@ -81,7 +81,7 @@ storage/           Book text and generated images, per project
 Two interaction chains that the server maintains across steps:
 
 - *Text chain*: `book upload → style → characters → chapters` (model: `gemini-3.6-flash`)
-- *Image chain*: `style context → portrait 1 → portrait 2 → bridge → illustration` (model: `gemini-3.1-flash-lite-image`)
+- *Image chain*: `style context → portrait 1 → portrait 2 → bridge → illustration` (model: `gemini-2.5-flash-image`)
 
 The book is uploaded to the Gemini File API once and referenced by URI in every subsequent text-chain interaction. The image chain is continued from the last portrait interaction so the model has character consistency context when generating chapter illustrations.
 

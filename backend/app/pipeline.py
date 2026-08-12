@@ -12,7 +12,7 @@ from .models import get_db
 STUCK_THRESHOLD_SECONDS = 180  # 3 minutes
 
 TEXT_MODEL = "gemini-3.6-flash"
-IMAGE_MODEL = "gemini-3.1-flash-lite-image"
+IMAGE_MODEL = "gemini-2.5-flash-image"
 
 SYSTEM_INSTRUCTIONS = (
     "There must be no text on the image, it should not look like a cover page. "

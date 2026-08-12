@@ -5,6 +5,17 @@ from contextlib import contextmanager
 DB_PATH = os.getenv("DB_PATH", "data/app.db")
 
 
+def _migrate(conn: sqlite3.Connection) -> None:
+    cols = {row[1] for row in conn.execute("PRAGMA table_info(users)").fetchall()}
+    if "email" not in cols:
+        conn.execute("ALTER TABLE users ADD COLUMN email TEXT NOT NULL DEFAULT ''")
+        # Assign unique placeholder emails to legacy rows so the unique index can be created
+        conn.execute(
+            "UPDATE users SET email = 'legacy-' || id || '@placeholder.invalid' WHERE email = ''"
+        )
+    conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email ON users(email)")
+
+
 def init_db() -> None:
     os.makedirs(os.path.dirname(DB_PATH) or ".", exist_ok=True)
     with get_db() as conn:
@@ -54,6 +65,7 @@ def init_db() -> None:
                 created_at TEXT NOT NULL
             );
         """)
+        _migrate(conn)
 
 
 @contextmanager

@@ -176,7 +176,7 @@ output = json.loads(interaction.output_text)
 
 ### Image Chain
 
-Model: `gemini-3.1-flash-lite-image`
+Model: `gemini-2.5-flash-image`
 
 ```
 image_context_interaction     [art style + system instructions]
