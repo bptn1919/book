@@ -2,13 +2,19 @@ import uuid
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
+from pydantic import BaseModel
 
 from .auth import CurrentUser
 from .models import get_db
+from . import pipeline
 from .pipeline import is_stuck
 from .storage import save_book
 
 router = APIRouter(prefix="/api/projects", tags=["projects"])
+
+
+class StyleIn(BaseModel):
+    art_style: str = ""
 
 
 def _now() -> str:
@@ -69,3 +75,16 @@ def get_project(project_id: str, user: CurrentUser):
         "characters": [dict(c) for c in characters],
         "chapters": [dict(c) for c in chapters],
     }
+
+
+@router.post("/{project_id}/style")
+async def run_style_step(project_id: str, body: StyleIn, user: CurrentUser):
+    with get_db() as conn:
+        row = conn.execute(
+            "SELECT book_uri FROM projects WHERE id=? AND user_id=?",
+            (project_id, user["id"]),
+        ).fetchone()
+    if not row:
+        raise HTTPException(404, "Project not found")
+    await pipeline.run_style(project_id, body.art_style, row["book_uri"])
+    return {"ok": True}
