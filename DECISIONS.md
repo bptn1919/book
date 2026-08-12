@@ -22,6 +22,9 @@ Claude initially proposed JSON files, which seemed reasonable because the assess
 
 Claude's first instinct was a single `status` enum covering both completion and execution state. I pushed back: a single enum can't express "step 3 done, step 4 currently running" without exploding into per-step RUNNING and FAILED variants — ten or more values. Split into two fields: `status` (which steps have completed, only moves forward) and `step_state` (IDLE / RUNNING / FAILED, can be reset on retry). Cost: two fields to keep in sync; a stranded `step_state = RUNNING` needs a timeout to clear.
 
+## 4. Duplicate Execution: SQLite transaction as the guard
+
+Claude proposed using a SQLite transaction with a SELECT → check → UPDATE to prevent duplicate Gemini calls. I pushed back because two concurrent requests could both see the step as available before either updated it. We landed on a conditional UPDATE ... WHERE step_state != 'RUNNING', using rowcount to determine whether the request successfully claimed the step; the Gemini call runs only after the claim commits, so no database lock is held during the 30-second API call. Cost: the conditional update is slightly less immediately readable than an explicit status check, so the rowcount behavior needs to be clear to future maintainers.
 
 ## If you had one more day, what would you build next and why?
 

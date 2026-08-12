@@ -11,7 +11,7 @@ Phase 0 complete. DECISION 1 (Stack) complete. DECISION 2 pending.
 | 1   | Stack                             | ✅ Python FastAPI + React TypeScript  |
 | 2   | Storage                           | ✅ SQLite (raw sqlite3, no ORM)        |
 | 3   | Pipeline State Model              | ✅ status + step_state, Gemini IDs persisted |
-| 4   | Duplicate Execution / Concurrency | Pending                               |
+| 4   | Duplicate Execution / Concurrency | ✅ SQLite transaction atomic check-and-set |
 | 5   | Gemini Integration                | Pending (requires DECISION 2–4 first) |
 | 6   | Testing Strategy                  | Pending                               |
 
