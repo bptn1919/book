@@ -67,6 +67,16 @@ def test_get_project_not_found():
     assert r.status_code == 404
 
 
+def test_get_project_is_stuck_false_on_new_project():
+    with TestClient(app) as client:
+        _register(client)
+        pid = client.post(
+            "/api/projects", data={"title": "My Book"}, files={"book": BOOK}
+        ).json()["id"]
+        r = client.get(f"/api/projects/{pid}")
+    assert r.json()["is_stuck"] is False
+
+
 def test_cannot_access_other_users_project():
     with TestClient(app) as client:
         _register(client, "Alice")

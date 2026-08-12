@@ -5,6 +5,7 @@ from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 
 from .auth import CurrentUser
 from .models import get_db
+from .pipeline import is_stuck
 from .storage import save_book
 
 router = APIRouter(prefix="/api/projects", tags=["projects"])
@@ -47,7 +48,7 @@ async def create_project(
 def get_project(project_id: str, user: CurrentUser):
     with get_db() as conn:
         row = conn.execute(
-            "SELECT id, title, status, step_state, art_style, created_at "
+            "SELECT id, title, status, step_state, step_started_at, art_style, created_at "
             "FROM projects WHERE id=? AND user_id=?",
             (project_id, user["id"]),
         ).fetchone()
@@ -61,8 +62,10 @@ def get_project(project_id: str, user: CurrentUser):
             "SELECT id, name, prompt, illustration_path FROM chapters WHERE project_id=?",
             (project_id,),
         ).fetchall()
+    project = dict(row)
     return {
-        **dict(row),
+        **project,
+        "is_stuck": is_stuck(project["step_state"], project["step_started_at"]),
         "characters": [dict(c) for c in characters],
         "chapters": [dict(c) for c in chapters],
     }
