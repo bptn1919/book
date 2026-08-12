@@ -32,4 +32,10 @@ Claude proposed using `interaction.output_image` for simpler image extraction. I
 
 ## If you had one more day, what would you build next and why?
 
-_To be answered after core implementation is complete._
+Real-time step updates via Server-Sent Events (SSE) instead of polling.
+
+The current polling approach works, but there is an experience gap that matters most during portrait and illustration generation, which takes 10–30 seconds each. The UI polls every 3 seconds, so the user sees the portrait appear with up to a 3-second lag after the server writes it. With SSE, the server pushes a message the moment each portrait lands on disk and the database row is updated. The user sees each portrait slide in as it arrives rather than during the next poll tick.
+
+The reason I did not include it in this submission is that SSE requires keeping one HTTP connection open per active project view, which adds a non-trivial amount of state on the server (connection registry, cleanup on disconnect). Polling is correct, survives disconnects gracefully, and costs only one extra round-trip per 3 seconds — acceptable for a demo. SSE is the right next step because it is the highest-ROI UX improvement relative to backend complexity, and the assessment explicitly names it as a potential bonus.
+
+The implementation would be: one `GET /api/projects/{id}/events` endpoint that yields an event-stream, a small in-process broker that the pipeline async runners publish to after each DB write, and a `useEffect` in `ProjectDetailPage` that opens the `EventSource` and updates local state on receipt. No new infrastructure needed — FastAPI supports SSE natively via `StreamingResponse`.
