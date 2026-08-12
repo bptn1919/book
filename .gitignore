@@ -1,0 +1,23 @@
+# User-requested ignores
+app-demo.html
+*.ipynb
+gradion-assessment-intern-software-engineer.md
+gradion-assessment-itern-software-engineer.md
+
+# Local environment
+.env
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Frontend artifacts
+node_modules/
+dist/
+coverage/
+
+# OS/editor
+.DS_Store
+Thumbs.db
+.vscode/
