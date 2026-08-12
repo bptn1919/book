@@ -30,6 +30,10 @@ Each of the five Gemini steps (style, characters, portraits, chapters, illustrat
 
 Health check returns 200. Startup cleanup: RUNNING steps left over from a previous crash are reset to FAILED on lifespan.
 
+**test_integration.py — happy-path end-to-end (2 tests)**
+
+Chains all 5 steps from CREATED to DONE in a single test, asserting status, step_state, character names, portrait paths, chapter name, and illustration path. A second test verifies the duplicate-call guard: once a step completes, a second request for the same step returns 409 without touching Gemini.
+
 ### What we deliberately do not test on the backend
 
 - The real `_run_*_sync` functions that call the Gemini API — these are integration with an external paid service and are covered by running the notebook manually (per the assessment spec). Testing them with real calls would cost quota and require a secret in CI.
@@ -78,13 +82,14 @@ cd frontend && npm test
 
 Produced on 2026-08-12, Python 3.12.8, Node 20, pytest 9.1.1, Vitest 3.2.7.
 
-### Backend — 51 passed
+
+### Backend — 53 passed
 
 ```
 ============================= test session starts =============================
 platform win32 -- Python 3.12.8, pytest-9.1.1, pluggy-1.6.0
 asyncio: mode=Mode.AUTO
-collected 51 items
+collected 53 items
 
 tests/test_api.py::test_health PASSED                                    [  1%]
 tests/test_api.py::test_startup_cleanup PASSED                           [  3%]
@@ -136,9 +141,11 @@ tests/test_steps.py::test_illustrations_step_fails_on_gemini_error PASSED [ 92%]
 tests/test_steps.py::test_illustrations_step_409_wrong_status PASSED     [ 94%]
 tests/test_steps.py::test_image_endpoint_blocks_path_traversal PASSED    [ 96%]
 tests/test_steps.py::test_style_step_requires_auth PASSED                [ 98%]
-tests/test_steps.py::test_style_step_404_unknown_project PASSED          [100%]
+tests/test_steps.py::test_style_step_404_unknown_project PASSED          [ 98%]
+tests/test_integration.py::test_happy_path_all_five_steps PASSED         [ 99%]
+tests/test_integration.py::test_no_duplicate_call_on_second_request PASSED [100%]
 
-============================== 51 passed in 2.64s ==============================
+============================== 53 passed in 2.81s ==============================
 ```
 
 ### Frontend — 14 passed
@@ -156,4 +163,4 @@ tests/test_steps.py::test_style_step_404_unknown_project PASSED          [100%]
     Duration  3.21s
 ```
 
-**Total: 65 tests, 0 failures.**
+**Grand total: 67 tests, 0 failures.**
