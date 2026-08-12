@@ -1,3 +1,7 @@
+# Generated data (never commit)
+backend/data/
+backend/storage/
+
 # User-requested ignores
 app-demo.html
 *.ipynb
