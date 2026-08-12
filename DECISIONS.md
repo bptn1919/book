@@ -26,6 +26,10 @@ Claude's first instinct was a single `status` enum covering both completion and 
 
 Claude proposed using a SQLite transaction with a SELECT → check → UPDATE to prevent duplicate Gemini calls. I pushed back because two concurrent requests could both see the step as available before either updated it. We landed on a conditional UPDATE ... WHERE step_state != 'RUNNING', using rowcount to determine whether the request successfully claimed the step; the Gemini call runs only after the claim commits, so no database lock is held during the 30-second API call. Cost: the conditional update is slightly less immediately readable than an explicit status check, so the rowcount behavior needs to be clear to future maintainers.
 
+## 5. Gemini Integration: verified API paths only
+
+Claude proposed using `interaction.output_image` for simpler image extraction. I rejected it because the reference notebook has a TODO around that field and the working implementation extracts images through `interaction.steps`. I chose to follow the verified path rather than introduce an unverified API dependency. I also kept the book upload and interaction chaining from the reference pipeline: the book is uploaded once, its URI is persisted, and subsequent steps continue the existing interaction chain. Cost: slightly more verbose integration code and an explicit fallback for potentially stale File API references.
+
 ## If you had one more day, what would you build next and why?
 
 _To be answered after core implementation is complete._
