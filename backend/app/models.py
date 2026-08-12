@@ -46,6 +46,12 @@ def init_db() -> None:
                 prompt            TEXT NOT NULL,
                 illustration_path TEXT
             );
+
+            CREATE TABLE IF NOT EXISTS sessions (
+                id         TEXT PRIMARY KEY,
+                user_id    TEXT NOT NULL REFERENCES users(id),
+                created_at TEXT NOT NULL
+            );
         """)
 
 
