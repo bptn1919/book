@@ -218,3 +218,75 @@ def _run_characters_sync(project_id: str, text_chain_last_id: str) -> dict:
         "characters": characters,
         "text_chain_last_id": interaction.id,
     }
+
+
+# ── Portraits step ─────────────────────────────────────────────────────────────
+
+async def run_portraits(
+    project_id: str,
+    art_style: str,
+    project_title: str,
+    characters: list[dict],
+) -> None:
+    claim_step(project_id, "CHARACTERS_GENERATED")
+    try:
+        result = await asyncio.get_running_loop().run_in_executor(
+            None, _run_portraits_sync, project_id, art_style, project_title, characters
+        )
+    except Exception:
+        with get_db() as conn:
+            fail_step(conn, project_id)
+        raise
+    with get_db() as conn:
+        for char_id, filename in result["portraits"]:
+            conn.execute(
+                "UPDATE characters SET portrait_path=? WHERE id=?",
+                (filename, char_id),
+            )
+        conn.execute(
+            "UPDATE projects SET image_chain_last_id=? WHERE id=?",
+            (result["image_chain_last_id"], project_id),
+        )
+        complete_step(conn, project_id, "PORTRAITS_GENERATED")
+
+
+def _run_portraits_sync(
+    project_id: str,
+    art_style: str,
+    project_title: str,
+    characters: list[dict],
+) -> dict:
+    client = _get_client()
+    style_prompt = f'Follow this style: "{art_style}" '
+
+    image_interaction = client.interactions.create(
+        model=IMAGE_MODEL,
+        input=(
+            f"You are going to generate portrait images to illustrate {project_title}. "
+            f"The style to follow is: {style_prompt} "
+            f"Rules: {SYSTEM_INSTRUCTIONS}"
+        ),
+    )
+
+    portraits = []
+    for i, char in enumerate(characters[:MAX_CHARACTERS]):
+        image_interaction = client.interactions.create(
+            model=IMAGE_MODEL,
+            input=f"Create an illustration for {char['name']} following this description: {char['prompt']}",
+            previous_interaction_id=image_interaction.id,
+        )
+        for step in reversed(image_interaction.steps):
+            if step.type == "model_output" and step.content:
+                for content in reversed(step.content):
+                    if content.type == "image":
+                        ext = content.mime_type.split("/")[-1]
+                        filename = f"portrait_{i}.{ext}"
+                        storage.save_image(project_id, filename, content.data)
+                        portraits.append((char["id"], filename))
+                        break
+                break
+
+    return {
+        "portraits": portraits,
+        "image_chain_last_id": image_interaction.id,
+    }

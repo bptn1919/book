@@ -1,12 +1,16 @@
 import uuid
 from datetime import datetime, timezone
 
+import re
+from pathlib import Path
+
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
+from . import pipeline, storage
 from .auth import CurrentUser
 from .models import get_db
-from . import pipeline
 from .pipeline import is_stuck
 from .storage import save_book
 
@@ -101,3 +105,41 @@ async def run_characters_step(project_id: str, user: CurrentUser):
         raise HTTPException(404, "Project not found")
     await pipeline.run_characters(project_id, row["text_chain_last_id"])
     return {"ok": True}
+
+
+@router.post("/{project_id}/portraits")
+async def run_portraits_step(project_id: str, user: CurrentUser):
+    with get_db() as conn:
+        row = conn.execute(
+            "SELECT title, art_style FROM projects WHERE id=? AND user_id=?",
+            (project_id, user["id"]),
+        ).fetchone()
+        if not row:
+            raise HTTPException(404, "Project not found")
+        characters = conn.execute(
+            "SELECT id, name, prompt FROM characters WHERE project_id=?",
+            (project_id,),
+        ).fetchall()
+    await pipeline.run_portraits(
+        project_id,
+        row["art_style"] or "",
+        row["title"],
+        [dict(c) for c in characters],
+    )
+    return {"ok": True}
+
+
+@router.get("/{project_id}/images/{filename}")
+def get_image(project_id: str, filename: str, user: CurrentUser):
+    if re.search(r"[/\\]|\.\.", filename):
+        raise HTTPException(400, "Invalid filename")
+    with get_db() as conn:
+        if not conn.execute(
+            "SELECT 1 FROM projects WHERE id=? AND user_id=?",
+            (project_id, user["id"]),
+        ).fetchone():
+            raise HTTPException(404, "Project not found")
+    path = storage.image_path(project_id, filename)
+    if not path.exists():
+        raise HTTPException(404, "Image not found")
+    return FileResponse(str(path))

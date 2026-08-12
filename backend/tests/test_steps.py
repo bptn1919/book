@@ -148,6 +148,85 @@ def test_characters_step_409_wrong_status():
     assert r.status_code == 409
 
 
+# ── Portraits step ─────────────────────────────────────────────────────────────
+
+def _advance_to_characters_generated(client: TestClient, pid: str) -> tuple[str, str]:
+    c1, c2 = "char-aaa", "char-bbb"
+    with models.get_db() as conn:
+        conn.execute(
+            "UPDATE projects SET status='CHARACTERS_GENERATED', art_style='watercolor' WHERE id=?",
+            (pid,),
+        )
+        conn.execute(
+            "INSERT INTO characters VALUES (?,?,'Mole','A mole desc',NULL)", (c1, pid)
+        )
+        conn.execute(
+            "INSERT INTO characters VALUES (?,?,'Rat','A rat desc',NULL)", (c2, pid)
+        )
+    return c1, c2
+
+
+def test_portraits_step_sets_portrait_paths():
+    with TestClient(app) as client:
+        pid = _setup(client)
+        c1, c2 = _advance_to_characters_generated(client, pid)
+        fake = {
+            "portraits": [(c1, "portrait_0.png"), (c2, "portrait_1.png")],
+            "image_chain_last_id": "img-chain-1",
+        }
+        with patch("app.pipeline._run_portraits_sync", return_value=fake):
+            r = client.post(f"/api/projects/{pid}/portraits")
+            assert r.status_code == 200
+            project = client.get(f"/api/projects/{pid}").json()
+    assert project["status"] == "PORTRAITS_GENERATED"
+    paths = {c["name"]: c["portrait_path"] for c in project["characters"]}
+    assert paths["Mole"] == "portrait_0.png"
+    assert paths["Rat"] == "portrait_1.png"
+
+
+def test_portraits_step_stores_image_chain_id():
+    with TestClient(app) as client:
+        pid = _setup(client)
+        c1, c2 = _advance_to_characters_generated(client, pid)
+        fake = {
+            "portraits": [(c1, "portrait_0.png"), (c2, "portrait_1.png")],
+            "image_chain_last_id": "img-chain-1",
+        }
+        with patch("app.pipeline._run_portraits_sync", return_value=fake):
+            client.post(f"/api/projects/{pid}/portraits")
+    with models.get_db() as conn:
+        row = conn.execute(
+            "SELECT image_chain_last_id FROM projects WHERE id=?", (pid,)
+        ).fetchone()
+    assert row["image_chain_last_id"] == "img-chain-1"
+
+
+def test_portraits_step_fails_on_gemini_error():
+    with TestClient(app, raise_server_exceptions=False) as client:
+        pid = _setup(client)
+        _advance_to_characters_generated(client, pid)
+        with patch("app.pipeline._run_portraits_sync", side_effect=RuntimeError("error")):
+            r = client.post(f"/api/projects/{pid}/portraits")
+            assert r.status_code == 500
+            project = client.get(f"/api/projects/{pid}").json()
+    assert project["step_state"] == "FAILED"
+    assert project["status"] == "CHARACTERS_GENERATED"
+
+
+def test_portraits_step_409_wrong_status():
+    with TestClient(app) as client:
+        pid = _setup(client)  # status=CREATED, not CHARACTERS_GENERATED
+        r = client.post(f"/api/projects/{pid}/portraits")
+    assert r.status_code == 409
+
+
+def test_image_endpoint_blocks_path_traversal():
+    with TestClient(app) as client:
+        pid = _setup(client)
+        r = client.get(f"/api/projects/{pid}/images/../../etc/passwd")
+    assert r.status_code in (400, 404)
+
+
 def test_style_step_requires_auth():
     with TestClient(app) as client:
         r = client.post("/api/projects/fake/style", json={"art_style": "watercolor"})
