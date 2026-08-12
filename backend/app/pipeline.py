@@ -1,6 +1,7 @@
 import asyncio
 import os
 import sqlite3
+import uuid
 from datetime import datetime, timedelta, timezone
 
 from fastapi import HTTPException
@@ -181,10 +182,9 @@ async def run_characters(project_id: str, text_chain_last_id: str) -> None:
         raise
     with get_db() as conn:
         for char in result["characters"][:MAX_CHARACTERS]:
-            import uuid as _uuid
             conn.execute(
                 "INSERT INTO characters (id,project_id,name,prompt) VALUES (?,?,?,?)",
-                (_uuid.uuid4().hex, project_id, char["name"], char["prompt"]),
+                (uuid.uuid4().hex, project_id, char["name"], char["prompt"]),
             )
         conn.execute(
             "UPDATE projects SET text_chain_last_id=? WHERE id=?",
@@ -288,5 +288,134 @@ def _run_portraits_sync(
 
     return {
         "portraits": portraits,
+        "image_chain_last_id": image_interaction.id,
+    }
+
+
+# ── Chapters step ─────────────────────────────────────────────────────────────
+
+MAX_CHAPTERS = 1
+
+
+async def run_chapters(project_id: str, text_chain_last_id: str) -> None:
+    claim_step(project_id, "PORTRAITS_GENERATED")
+    try:
+        result = await asyncio.get_running_loop().run_in_executor(
+            None, _run_chapters_sync, project_id, text_chain_last_id
+        )
+    except Exception:
+        with get_db() as conn:
+            fail_step(conn, project_id)
+        raise
+    with get_db() as conn:
+        for chapter in result["chapters"][:MAX_CHAPTERS]:
+            conn.execute(
+                "INSERT INTO chapters (id,project_id,name,prompt) VALUES (?,?,?,?)",
+                (uuid.uuid4().hex, project_id, chapter["name"], chapter["prompt"]),
+            )
+        conn.execute(
+            "UPDATE projects SET text_chain_last_id=? WHERE id=?",
+            (result["text_chain_last_id"], project_id),
+        )
+        complete_step(conn, project_id, "CHAPTERS_GENERATED")
+
+
+def _run_chapters_sync(project_id: str, text_chain_last_id: str) -> dict:
+    import json
+    from pydantic import BaseModel
+
+    client = _get_client()
+
+    class Prompt(BaseModel):
+        name: str
+        prompt: str
+
+    interaction = client.interactions.create(
+        model=TEXT_MODEL,
+        input=(
+            "Now, for each chapter of the book, give me a prompt to illustrate what happens in it. "
+            "For each chapter, give it a name and a very detailed description prompt (100 words minimum)."
+        ),
+        previous_interaction_id=text_chain_last_id,
+        response_format={
+            "type": "text",
+            "mime_type": "application/json",
+            "schema": {"type": "array", "items": Prompt.model_json_schema()},
+        },
+    )
+    chapters = json.loads(interaction.output_text)[:MAX_CHAPTERS]
+    return {
+        "chapters": chapters,
+        "text_chain_last_id": interaction.id,
+    }
+
+
+# ── Illustrations step ─────────────────────────────────────────────────────────
+
+async def run_illustrations(
+    project_id: str,
+    image_chain_last_id: str,
+    chapters: list[dict],
+) -> None:
+    claim_step(project_id, "CHAPTERS_GENERATED")
+    try:
+        result = await asyncio.get_running_loop().run_in_executor(
+            None, _run_illustrations_sync, project_id, image_chain_last_id, chapters
+        )
+    except Exception:
+        with get_db() as conn:
+            fail_step(conn, project_id)
+        raise
+    with get_db() as conn:
+        for chapter_id, filename in result["illustrations"]:
+            conn.execute(
+                "UPDATE chapters SET illustration_path=? WHERE id=?",
+                (filename, chapter_id),
+            )
+        conn.execute(
+            "UPDATE projects SET image_chain_last_id=? WHERE id=?",
+            (result["image_chain_last_id"], project_id),
+        )
+        complete_step(conn, project_id, "DONE")
+
+
+def _run_illustrations_sync(
+    project_id: str,
+    image_chain_last_id: str,
+    chapters: list[dict],
+) -> dict:
+    client = _get_client()
+
+    bridge_interaction = client.interactions.create(
+        model=IMAGE_MODEL,
+        input=(
+            "Starting from now, we're going to illustrate the book's chapters. "
+            "Keep in mind the previous characters when generating the new images. "
+            "Keep the same style."
+        ),
+        previous_interaction_id=image_chain_last_id,
+    )
+
+    illustrations = []
+    image_interaction = bridge_interaction
+    for i, chapter in enumerate(chapters[:MAX_CHAPTERS]):
+        image_interaction = client.interactions.create(
+            model=IMAGE_MODEL,
+            input=f"Create an illustration for chapter {chapter['name']} following this description: {chapter['prompt']}",
+            previous_interaction_id=image_interaction.id,
+        )
+        for step in reversed(image_interaction.steps):
+            if step.type == "model_output" and step.content:
+                for content in reversed(step.content):
+                    if content.type == "image":
+                        ext = content.mime_type.split("/")[-1]
+                        filename = f"illustration_{i}.{ext}"
+                        storage.save_image(project_id, filename, content.data)
+                        illustrations.append((chapter["id"], filename))
+                        break
+                break
+
+    return {
+        "illustrations": illustrations,
         "image_chain_last_id": image_interaction.id,
     }

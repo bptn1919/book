@@ -129,6 +129,40 @@ async def run_portraits_step(project_id: str, user: CurrentUser):
     return {"ok": True}
 
 
+@router.post("/{project_id}/chapters")
+async def run_chapters_step(project_id: str, user: CurrentUser):
+    with get_db() as conn:
+        row = conn.execute(
+            "SELECT text_chain_last_id FROM projects WHERE id=? AND user_id=?",
+            (project_id, user["id"]),
+        ).fetchone()
+    if not row:
+        raise HTTPException(404, "Project not found")
+    await pipeline.run_chapters(project_id, row["text_chain_last_id"])
+    return {"ok": True}
+
+
+@router.post("/{project_id}/illustrations")
+async def run_illustrations_step(project_id: str, user: CurrentUser):
+    with get_db() as conn:
+        row = conn.execute(
+            "SELECT image_chain_last_id FROM projects WHERE id=? AND user_id=?",
+            (project_id, user["id"]),
+        ).fetchone()
+        if not row:
+            raise HTTPException(404, "Project not found")
+        chapters = conn.execute(
+            "SELECT id, name, prompt FROM chapters WHERE project_id=?",
+            (project_id,),
+        ).fetchall()
+    await pipeline.run_illustrations(
+        project_id,
+        row["image_chain_last_id"] or "",
+        [dict(c) for c in chapters],
+    )
+    return {"ok": True}
+
+
 @router.get("/{project_id}/images/{filename}")
 def get_image(project_id: str, filename: str, user: CurrentUser):
     if re.search(r"[/\\]|\.\.", filename):

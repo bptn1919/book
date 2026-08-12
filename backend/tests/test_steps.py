@@ -220,6 +220,116 @@ def test_portraits_step_409_wrong_status():
     assert r.status_code == 409
 
 
+# ── Chapters step ─────────────────────────────────────────────────────────────
+
+FAKE_CHAPTERS = {
+    "chapters": [
+        {"name": "Chapter 1", "prompt": "Mole abandons his spring-cleaning and escapes to the riverbank..."},
+        {"name": "Chapter 2", "prompt": "Should be dropped — cap is 1"},
+    ],
+    "text_chain_last_id": "interaction-chapters-1",
+}
+
+
+def _advance_to_portraits_generated(client: TestClient, pid: str) -> tuple[str, str]:
+    c1, c2 = "char-aaa", "char-bbb"
+    with models.get_db() as conn:
+        conn.execute(
+            "UPDATE projects SET status='PORTRAITS_GENERATED', art_style='watercolor', "
+            "image_chain_last_id='img-chain-1', text_chain_last_id='chain-1' WHERE id=?",
+            (pid,),
+        )
+        conn.execute(
+            "INSERT INTO characters VALUES (?,?,'Mole','A mole desc','portrait_0.png')", (c1, pid)
+        )
+        conn.execute(
+            "INSERT INTO characters VALUES (?,?,'Rat','A rat desc','portrait_1.png')", (c2, pid)
+        )
+    return c1, c2
+
+
+def test_chapters_step_stores_up_to_one_chapter():
+    with patch("app.pipeline._run_chapters_sync", return_value=FAKE_CHAPTERS):
+        with TestClient(app) as client:
+            pid = _setup(client)
+            _advance_to_portraits_generated(client, pid)
+            r = client.post(f"/api/projects/{pid}/chapters")
+            assert r.status_code == 200
+            project = client.get(f"/api/projects/{pid}").json()
+    assert project["status"] == "CHAPTERS_GENERATED"
+    assert len(project["chapters"]) == 1
+    assert project["chapters"][0]["name"] == "Chapter 1"
+
+
+def test_chapters_step_fails_on_gemini_error():
+    with patch("app.pipeline._run_chapters_sync", side_effect=RuntimeError("timeout")):
+        with TestClient(app, raise_server_exceptions=False) as client:
+            pid = _setup(client)
+            _advance_to_portraits_generated(client, pid)
+            r = client.post(f"/api/projects/{pid}/chapters")
+            assert r.status_code == 500
+            project = client.get(f"/api/projects/{pid}").json()
+    assert project["step_state"] == "FAILED"
+    assert project["status"] == "PORTRAITS_GENERATED"
+
+
+def test_chapters_step_409_wrong_status():
+    with TestClient(app) as client:
+        pid = _setup(client)  # status=CREATED, not PORTRAITS_GENERATED
+        r = client.post(f"/api/projects/{pid}/chapters")
+    assert r.status_code == 409
+
+
+# ── Illustrations step ─────────────────────────────────────────────────────────
+
+def _advance_to_chapters_generated(client: TestClient, pid: str) -> str:
+    ch1 = "chapter-aaa"
+    with models.get_db() as conn:
+        conn.execute(
+            "UPDATE projects SET status='CHAPTERS_GENERATED', image_chain_last_id='img-chain-1' WHERE id=?",
+            (pid,),
+        )
+        conn.execute(
+            "INSERT INTO chapters VALUES (?,?,'Chapter 1','A long prompt...',NULL)", (ch1, pid)
+        )
+    return ch1
+
+
+def test_illustrations_step_sets_illustration_paths():
+    with TestClient(app) as client:
+        pid = _setup(client)
+        ch1 = _advance_to_chapters_generated(client, pid)
+        fake = {
+            "illustrations": [(ch1, "illustration_0.png")],
+            "image_chain_last_id": "img-chain-final",
+        }
+        with patch("app.pipeline._run_illustrations_sync", return_value=fake):
+            r = client.post(f"/api/projects/{pid}/illustrations")
+            assert r.status_code == 200
+            project = client.get(f"/api/projects/{pid}").json()
+    assert project["status"] == "DONE"
+    assert project["chapters"][0]["illustration_path"] == "illustration_0.png"
+
+
+def test_illustrations_step_fails_on_gemini_error():
+    with TestClient(app, raise_server_exceptions=False) as client:
+        pid = _setup(client)
+        _advance_to_chapters_generated(client, pid)
+        with patch("app.pipeline._run_illustrations_sync", side_effect=RuntimeError("error")):
+            r = client.post(f"/api/projects/{pid}/illustrations")
+            assert r.status_code == 500
+            project = client.get(f"/api/projects/{pid}").json()
+    assert project["step_state"] == "FAILED"
+    assert project["status"] == "CHAPTERS_GENERATED"
+
+
+def test_illustrations_step_409_wrong_status():
+    with TestClient(app) as client:
+        pid = _setup(client)  # status=CREATED, not CHAPTERS_GENERATED
+        r = client.post(f"/api/projects/{pid}/illustrations")
+    assert r.status_code == 409
+
+
 def test_image_endpoint_blocks_path_traversal():
     with TestClient(app) as client:
         pid = _setup(client)
