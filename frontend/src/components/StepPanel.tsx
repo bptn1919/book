@@ -4,6 +4,7 @@ import type { Project } from '../api'
 interface Props {
   project: Project
   stepError: string
+  pending?: boolean
   onRunStyle: (style: string) => void
   onRunCharacters: () => void
   onRunPortraits: () => void
@@ -28,13 +29,14 @@ const RUNNING_LABELS: Record<string, string> = {
 }
 
 export function StepPanel({
-  project, stepError,
+  project, stepError, pending = false,
   onRunStyle, onRunCharacters, onRunPortraits, onRunChapters, onRunIllustrations,
 }: Props) {
   const [styleInput, setStyleInput] = useState('')
   const running = project.step_state === 'RUNNING'
   const failed = project.step_state === 'FAILED'
   const status = project.status
+  const busy = pending || running
 
   function handleAction() {
     switch (status) {
@@ -52,25 +54,25 @@ export function StepPanel({
 
   return (
     <div className="step-panel">
-      {running && (
+      {busy && (
         <div className="status-line">
           <div className="spinner" />
-          {RUNNING_LABELS[status] ?? 'Working…'}
-          <span style={{ fontSize: 11, color: 'var(--fg-3)', marginLeft: 4 }}>This may take 10–30s</span>
+          {pending ? 'Sending request…' : (RUNNING_LABELS[status] ?? 'Working…')}
+          {!pending && <span style={{ fontSize: 11, color: 'var(--fg-3)', marginLeft: 4 }}>This may take 10–30s</span>}
         </div>
       )}
-      {failed && stepError && (
+      {!busy && failed && stepError && (
         <div className="status-line error">
           ⚠ {stepError}
         </div>
       )}
-      {!running && failed && (
+      {!busy && failed && (
         <div className="status-line error">
           ⚠ This step failed. You can retry it below.
         </div>
       )}
 
-      {status === 'CREATED' && !running && (
+      {status === 'CREATED' && !busy && (
         <div className="gd-field" style={{ marginBottom: 14 }}>
           <label htmlFor="style-input">Art style <span style={{ color: 'var(--fg-3)', fontWeight: 400 }}>(optional — leave blank for AI to choose)</span></label>
           <input
@@ -79,18 +81,17 @@ export function StepPanel({
             placeholder="e.g. watercolor, soft pastels"
             value={styleInput}
             onChange={e => setStyleInput(e.target.value)}
-            disabled={running}
           />
         </div>
       )}
 
-      {!running && status !== 'DONE' && (
+      {!busy && status !== 'DONE' && (
         <button className="gd-btn gd-btn-primary" onClick={handleAction}>
           {btnLabel}
         </button>
       )}
 
-      {!running && status !== 'DONE' && (
+      {!busy && status !== 'DONE' && (
         <p className="help" style={{ marginTop: 12 }}>
           {status === 'CREATED' && 'Gemini will read your book and set the style for all illustrations.'}
           {status === 'STYLE_SET' && 'Gemini will identify the main adult characters and describe them.'}

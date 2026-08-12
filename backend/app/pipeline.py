@@ -119,9 +119,11 @@ async def run_style(project_id: str, art_style: str, existing_book_uri: str | No
                 (result["book_uri"], result["text_chain_last_id"], result["art_style"], project_id),
             )
             complete_step(conn, project_id, "STYLE_SET")
-    except Exception:
+    except Exception as e:
         with get_db() as conn:
             fail_step(conn, project_id)
+        import logging
+        logging.error(f"Style step failed for {project_id}: {type(e).__name__}: {e}")
         raise
 
 

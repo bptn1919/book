@@ -22,6 +22,7 @@ export function ProjectDetailPage({ projectId, user, onBack, onLogout }: Props) 
   const [project, setProject] = useState<Project | null>(null)
   const [loadErr, setLoadErr] = useState(false)
   const [stepErr, setStepErr] = useState('')
+  const [pending, setPending] = useState(false)
   const [bookOpen, setBookOpen] = useState(false)
   const pollRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -53,6 +54,7 @@ export function ProjectDetailPage({ projectId, user, onBack, onLogout }: Props) 
 
   async function runStep(fn: () => Promise<unknown>) {
     setStepErr('')
+    setPending(true)
     try {
       await fn()
     } catch (err: unknown) {
@@ -60,9 +62,10 @@ export function ProjectDetailPage({ projectId, user, onBack, onLogout }: Props) 
       if (e.status !== 409) {
         setStepErr(e.message ?? 'Something went wrong. Please try again.')
       }
-      // 409 = already running — fall through to load() so polling starts
+    } finally {
+      setPending(false)
     }
-    await load()  // always reload; useEffect picks up RUNNING and starts polling
+    await load()
   }
 
   async function handleLogout() {
@@ -175,6 +178,7 @@ export function ProjectDetailPage({ projectId, user, onBack, onLogout }: Props) 
               <StepPanel
                 project={project}
                 stepError={stepErr}
+                pending={pending}
                 onRunStyle={style => runStep(() => runStyle(projectId, style))}
                 onRunCharacters={() => runStep(() => runCharacters(projectId))}
                 onRunPortraits={() => runStep(() => runPortraits(projectId))}

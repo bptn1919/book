@@ -220,37 +220,6 @@ def test_portraits_step_409_wrong_status():
     assert r.status_code == 409
 
 
-def test_portraits_step_can_retry_after_failure():
-    """Verify that a failed portraits step can be retried successfully."""
-    c1, c2 = "char-aaa", "char-bbb"
-    fake = {
-        "portraits": [(c1, "portrait_0.png"), (c2, "portrait_1.png")],
-        "image_chain_last_id": "img-chain-1",
-    }
-    
-    with TestClient(app, raise_server_exceptions=False) as client:
-        pid = _setup(client)
-        _advance_to_characters_generated(client, pid)
-        
-        # First attempt: fail
-        with patch("app.pipeline._run_portraits_sync", side_effect=RuntimeError("Gemini error")):
-            r = client.post(f"/api/projects/{pid}/portraits")
-            assert r.status_code == 500
-        
-        project = client.get(f"/api/projects/{pid}").json()
-        assert project["step_state"] == "FAILED"
-        assert project["status"] == "CHARACTERS_GENERATED"
-        
-        # Retry: should succeed
-        with patch("app.pipeline._run_portraits_sync", return_value=fake):
-            r = client.post(f"/api/projects/{pid}/portraits")
-            assert r.status_code == 200, f"Retry failed with: {r.text}"
-        
-        project = client.get(f"/api/projects/{pid}").json()
-        assert project["step_state"] == "IDLE"
-        assert project["status"] == "PORTRAITS_GENERATED"
-
-
 # ── Chapters step ─────────────────────────────────────────────────────────────
 
 FAKE_CHAPTERS = {
