@@ -1,5 +1,9 @@
 import sqlite3
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
+
+from fastapi import HTTPException
+
+from .models import get_db
 
 STUCK_THRESHOLD_SECONDS = 180  # 3 minutes
 
@@ -25,6 +29,32 @@ def fail_step(conn: sqlite3.Connection, project_id: str) -> None:
         "UPDATE projects SET step_state='FAILED', step_started_at=NULL WHERE id=?",
         (project_id,),
     )
+
+
+def claim_step(project_id: str, required_status: str) -> None:
+    """Atomically claim a pipeline step. Raises HTTPException on conflict."""
+    now = datetime.now(timezone.utc)
+    stuck_cutoff = (now - timedelta(seconds=STUCK_THRESHOLD_SECONDS)).isoformat()
+    with get_db() as conn:
+        cur = conn.execute(
+            "UPDATE projects SET step_state='RUNNING', step_started_at=? "
+            "WHERE id=? AND status=? "
+            "AND (step_state != 'RUNNING' OR step_started_at <= ?)",
+            (now.isoformat(), project_id, required_status, stuck_cutoff),
+        )
+        if cur.rowcount == 0:
+            row = conn.execute(
+                "SELECT status, step_state FROM projects WHERE id=?",
+                (project_id,),
+            ).fetchone()
+            if not row:
+                raise HTTPException(404, "Project not found")
+            if row["step_state"] == "RUNNING":
+                raise HTTPException(409, "Step already running")
+            raise HTTPException(
+                409,
+                f"Step requires status {required_status!r}, got {row['status']!r}",
+            )
 
 
 def is_stuck(step_state: str, step_started_at: str | None) -> bool:
