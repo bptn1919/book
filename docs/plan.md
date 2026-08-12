@@ -6,14 +6,14 @@ Phase 0 complete. DECISION 1 (Stack) complete. DECISION 2 pending.
 
 ## Architectural Decisions
 
-| #   | Decision                          | Status                                |
-| --- | --------------------------------- | ------------------------------------- |
-| 1   | Stack                             | ✅ Python FastAPI + React TypeScript  |
-| 2   | Storage                           | ✅ SQLite (raw sqlite3, no ORM)        |
+| #   | Decision                          | Status                                       |
+| --- | --------------------------------- | -------------------------------------------- |
+| 1   | Stack                             | ✅ Python FastAPI + React TypeScript         |
+| 2   | Storage                           | ✅ SQLite (raw sqlite3, no ORM)              |
 | 3   | Pipeline State Model              | ✅ status + step_state, Gemini IDs persisted |
-| 4   | Duplicate Execution / Concurrency | ✅ SQLite transaction atomic check-and-set |
-| 5   | Gemini Integration                | ✅ SDK + chain + steps loop + TTL fallback |
-| 6   | Testing Strategy                  | — (covered in TESTING.md)            |
+| 4   | Duplicate Execution / Concurrency | ✅ SQLite transaction atomic check-and-set   |
+| 5   | Gemini Integration                | ✅ SDK + chain + steps loop + TTL fallback   |
+| 6   | Testing Strategy                  | — (covered in TESTING.md)                    |
 
 ## Verified Pipeline Mechanics (from notebook)
 

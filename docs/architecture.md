@@ -12,14 +12,14 @@ A web application that turns a book's text into character portraits and a chapte
 
 ## Stack
 
-| Layer | Choice | Reason |
-|---|---|---|
-| Backend | Python 3.12 + FastAPI | Notebook is Python; FastAPI's ASGI model handles concurrent long-running Gemini calls without blocking |
-| Database | SQLite via `sqlite3` stdlib | Transactional, no extra service, no ORM dep; WAL mode for concurrent reads |
-| Gemini SDK | `google-genai >= 2.10.0` | Reference implementation; Interactions API verified from notebook |
-| Frontend | React 18 + Vite + TypeScript | Type safety for five pipeline states and API contracts; Vite provides a lightweight frontend setup |
-| Backend tests | pytest + httpx | Async-compatible HTTP client for FastAPI |
-| Frontend tests | Vitest + @testing-library/react | Co-located with Vite config |
+| Layer          | Choice                          | Reason                                                                                                 |
+| -------------- | ------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| Backend        | Python 3.12 + FastAPI           | Notebook is Python; FastAPI's ASGI model handles concurrent long-running Gemini calls without blocking |
+| Database       | SQLite via `sqlite3` stdlib     | Transactional, no extra service, no ORM dep; WAL mode for concurrent reads                             |
+| Gemini SDK     | `google-genai >= 2.10.0`        | Reference implementation; Interactions API verified from notebook                                      |
+| Frontend       | React 18 + Vite + TypeScript    | Type safety for five pipeline states and API contracts; Vite provides a lightweight frontend setup     |
+| Backend tests  | pytest + httpx                  | Async-compatible HTTP client for FastAPI                                                               |
+| Frontend tests | Vitest + @testing-library/react | Co-located with Vite config                                                                            |
 
 ---
 
@@ -98,11 +98,13 @@ CREATE TABLE chapters (
 ```
 
 **Status progression** (forward only — only advances on success):
+
 ```
 CREATED → STYLE_SET → CHARACTERS_GENERATED → PORTRAITS_GENERATED → CHAPTERS_GENERATED → DONE
 ```
 
 **step_state** (resettable on retry):
+
 ```
 IDLE → RUNNING → IDLE (success) | FAILED (error)
 ```
@@ -164,6 +166,7 @@ book_interaction            [File API URI → document input]
 Each step passes `previous_interaction_id` of the prior step. The returned interaction ID is persisted to `projects.text_chain_last_id`.
 
 Structured output:
+
 ```python
 response_format={
     "type": "text",

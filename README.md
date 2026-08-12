@@ -22,6 +22,7 @@ cp .env.example .env          # add your GEMINI_API_KEY
 ```
 
 Opens:
+
 - Backend: http://localhost:8000
 - Frontend: http://localhost:5173
 
@@ -43,13 +44,13 @@ Runs 51 backend tests (pytest) and 14 frontend tests (Vitest). No Gemini API key
 
 Copy `.env.example` to `.env` and fill in:
 
-| Variable | Required | Default | Description |
-|---|---|---|---|
-| `GEMINI_API_KEY` | Yes | — | Your Gemini API key |
-| `APP_HOST` | No | `0.0.0.0` | Backend bind host |
-| `APP_PORT` | No | `8000` | Backend port |
-| `DB_PATH` | No | `data/app.db` | SQLite database path |
-| `STORAGE_DIR` | No | `storage` | Directory for book files and images |
+| Variable         | Required | Default       | Description                         |
+| ---------------- | -------- | ------------- | ----------------------------------- |
+| `GEMINI_API_KEY` | Yes      | —             | Your Gemini API key                 |
+| `APP_HOST`       | No       | `0.0.0.0`     | Backend bind host                   |
+| `APP_PORT`       | No       | `8000`        | Backend port                        |
+| `DB_PATH`        | No       | `data/app.db` | SQLite database path                |
+| `STORAGE_DIR`    | No       | `storage`     | Directory for book files and images |
 
 ---
 
@@ -80,8 +81,8 @@ storage/           Book text and generated images, per project
 
 Two interaction chains that the server maintains across steps:
 
-- *Text chain*: `book upload → style → characters → chapters` (model: `gemini-3.6-flash`)
-- *Image chain*: `style context → portrait 1 → portrait 2 → bridge → illustration` (model: `gemini-2.5-flash-image`)
+- _Text chain_: `book upload → style → characters → chapters` (model: `gemini-3.6-flash`)
+- _Image chain_: `style context → portrait 1 → portrait 2 → bridge → illustration` (model: `gemini-2.5-flash-image`)
 
 The book is uploaded to the Gemini File API once and referenced by URI in every subsequent text-chain interaction. The image chain is continued from the last portrait interaction so the model has character consistency context when generating chapter illustrations.
 

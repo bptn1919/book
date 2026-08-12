@@ -64,7 +64,7 @@ export function StepPanel({
           ⚠ {stepError}
         </div>
       )}
-      {!running && failed && !stepError && (
+      {!running && failed && (
         <div className="status-line error">
           ⚠ This step failed. You can retry it below.
         </div>

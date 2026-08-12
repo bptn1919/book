@@ -113,16 +113,16 @@ async def run_style(project_id: str, art_style: str, existing_book_uri: str | No
         result = await asyncio.get_running_loop().run_in_executor(
             None, _run_style_sync, project_id, art_style, existing_book_uri
         )
+        with get_db() as conn:
+            conn.execute(
+                "UPDATE projects SET book_uri=?, text_chain_last_id=?, art_style=? WHERE id=?",
+                (result["book_uri"], result["text_chain_last_id"], result["art_style"], project_id),
+            )
+            complete_step(conn, project_id, "STYLE_SET")
     except Exception:
         with get_db() as conn:
             fail_step(conn, project_id)
         raise
-    with get_db() as conn:
-        conn.execute(
-            "UPDATE projects SET book_uri=?, text_chain_last_id=?, art_style=? WHERE id=?",
-            (result["book_uri"], result["text_chain_last_id"], result["art_style"], project_id),
-        )
-        complete_step(conn, project_id, "STYLE_SET")
 
 
 def _run_style_sync(project_id: str, art_style: str, existing_book_uri: str | None) -> dict:
@@ -176,21 +176,21 @@ async def run_characters(project_id: str, text_chain_last_id: str) -> None:
         result = await asyncio.get_running_loop().run_in_executor(
             None, _run_characters_sync, project_id, text_chain_last_id
         )
+        with get_db() as conn:
+            for char in result["characters"][:MAX_CHARACTERS]:
+                conn.execute(
+                    "INSERT INTO characters (id,project_id,name,prompt) VALUES (?,?,?,?)",
+                    (uuid.uuid4().hex, project_id, char["name"], char["prompt"]),
+                )
+            conn.execute(
+                "UPDATE projects SET text_chain_last_id=? WHERE id=?",
+                (result["text_chain_last_id"], project_id),
+            )
+            complete_step(conn, project_id, "CHARACTERS_GENERATED")
     except Exception:
         with get_db() as conn:
             fail_step(conn, project_id)
         raise
-    with get_db() as conn:
-        for char in result["characters"][:MAX_CHARACTERS]:
-            conn.execute(
-                "INSERT INTO characters (id,project_id,name,prompt) VALUES (?,?,?,?)",
-                (uuid.uuid4().hex, project_id, char["name"], char["prompt"]),
-            )
-        conn.execute(
-            "UPDATE projects SET text_chain_last_id=? WHERE id=?",
-            (result["text_chain_last_id"], project_id),
-        )
-        complete_step(conn, project_id, "CHARACTERS_GENERATED")
 
 
 def _run_characters_sync(project_id: str, text_chain_last_id: str) -> dict:
@@ -233,21 +233,21 @@ async def run_portraits(
         result = await asyncio.get_running_loop().run_in_executor(
             None, _run_portraits_sync, project_id, art_style, project_title, characters
         )
+        with get_db() as conn:
+            for char_id, filename in result["portraits"]:
+                conn.execute(
+                    "UPDATE characters SET portrait_path=? WHERE id=?",
+                    (filename, char_id),
+                )
+            conn.execute(
+                "UPDATE projects SET image_chain_last_id=? WHERE id=?",
+                (result["image_chain_last_id"], project_id),
+            )
+            complete_step(conn, project_id, "PORTRAITS_GENERATED")
     except Exception:
         with get_db() as conn:
             fail_step(conn, project_id)
         raise
-    with get_db() as conn:
-        for char_id, filename in result["portraits"]:
-            conn.execute(
-                "UPDATE characters SET portrait_path=? WHERE id=?",
-                (filename, char_id),
-            )
-        conn.execute(
-            "UPDATE projects SET image_chain_last_id=? WHERE id=?",
-            (result["image_chain_last_id"], project_id),
-        )
-        complete_step(conn, project_id, "PORTRAITS_GENERATED")
 
 
 def _run_portraits_sync(
@@ -303,21 +303,21 @@ async def run_chapters(project_id: str, text_chain_last_id: str) -> None:
         result = await asyncio.get_running_loop().run_in_executor(
             None, _run_chapters_sync, project_id, text_chain_last_id
         )
+        with get_db() as conn:
+            for chapter in result["chapters"][:MAX_CHAPTERS]:
+                conn.execute(
+                    "INSERT INTO chapters (id,project_id,name,prompt) VALUES (?,?,?,?)",
+                    (uuid.uuid4().hex, project_id, chapter["name"], chapter["prompt"]),
+                )
+            conn.execute(
+                "UPDATE projects SET text_chain_last_id=? WHERE id=?",
+                (result["text_chain_last_id"], project_id),
+            )
+            complete_step(conn, project_id, "CHAPTERS_GENERATED")
     except Exception:
         with get_db() as conn:
             fail_step(conn, project_id)
         raise
-    with get_db() as conn:
-        for chapter in result["chapters"][:MAX_CHAPTERS]:
-            conn.execute(
-                "INSERT INTO chapters (id,project_id,name,prompt) VALUES (?,?,?,?)",
-                (uuid.uuid4().hex, project_id, chapter["name"], chapter["prompt"]),
-            )
-        conn.execute(
-            "UPDATE projects SET text_chain_last_id=? WHERE id=?",
-            (result["text_chain_last_id"], project_id),
-        )
-        complete_step(conn, project_id, "CHAPTERS_GENERATED")
 
 
 def _run_chapters_sync(project_id: str, text_chain_last_id: str) -> dict:
@@ -362,21 +362,21 @@ async def run_illustrations(
         result = await asyncio.get_running_loop().run_in_executor(
             None, _run_illustrations_sync, project_id, image_chain_last_id, chapters
         )
+        with get_db() as conn:
+            for chapter_id, filename in result["illustrations"]:
+                conn.execute(
+                    "UPDATE chapters SET illustration_path=? WHERE id=?",
+                    (filename, chapter_id),
+                )
+            conn.execute(
+                "UPDATE projects SET image_chain_last_id=? WHERE id=?",
+                (result["image_chain_last_id"], project_id),
+            )
+            complete_step(conn, project_id, "DONE")
     except Exception:
         with get_db() as conn:
             fail_step(conn, project_id)
         raise
-    with get_db() as conn:
-        for chapter_id, filename in result["illustrations"]:
-            conn.execute(
-                "UPDATE chapters SET illustration_path=? WHERE id=?",
-                (filename, chapter_id),
-            )
-        conn.execute(
-            "UPDATE projects SET image_chain_last_id=? WHERE id=?",
-            (result["image_chain_last_id"], project_id),
-        )
-        complete_step(conn, project_id, "DONE")
 
 
 def _run_illustrations_sync(

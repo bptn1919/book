@@ -8,14 +8,14 @@ A web app that turns a book's text into character portraits and a chapter illust
 
 ## Stack (Decided — DECISION 1)
 
-| Layer | Technology |
-|---|---|
-| Backend | Python 3.12 + FastAPI |
-| Database | SQLite via `sqlite3` stdlib (no ORM) |
-| Gemini SDK | `google-genai >= 2.10.0` (Python) |
-| Frontend | React 18 + Vite + TypeScript |
-| Backend tests | pytest + httpx |
-| Frontend tests | Vitest + @testing-library/react |
+| Layer          | Technology                           |
+| -------------- | ------------------------------------ |
+| Backend        | Python 3.12 + FastAPI                |
+| Database       | SQLite via `sqlite3` stdlib (no ORM) |
+| Gemini SDK     | `google-genai >= 2.10.0` (Python)    |
+| Frontend       | React 18 + Vite + TypeScript         |
+| Backend tests  | pytest + httpx                       |
+| Frontend tests | Vitest + @testing-library/react      |
 
 ## Hard Constraints (Non-Negotiable)
 
@@ -34,6 +34,7 @@ A web app that turns a book's text into character portraits and a chapter illust
 Two independent interaction chains:
 
 **Text chain** (GEMINI_MODEL_ID = `gemini-3.6-flash`):
+
 ```
 book_interaction [File API upload → book.uri]
   └── style_interaction [generates/acknowledges art style]
@@ -42,6 +43,7 @@ book_interaction [File API upload → book.uri]
 ```
 
 **Image chain** (IMAGE_MODEL_ID = `gemini-2.5-flash-image`):
+
 ```
 image_context_interaction [style + system instructions]
   └── portrait_interaction_1 [character[0]]
