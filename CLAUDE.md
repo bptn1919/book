@@ -11,6 +11,7 @@ A web app that turns a book's text into character portraits and a chapter illust
 | Layer | Technology |
 |---|---|
 | Backend | Python 3.12 + FastAPI |
+| Database | SQLite via `sqlite3` stdlib (no ORM) |
 | Gemini SDK | `google-genai >= 2.10.0` (Python) |
 | Frontend | React 18 + Vite + TypeScript |
 | Backend tests | pytest + httpx |

@@ -9,7 +9,7 @@ Phase 0 complete. DECISION 1 (Stack) complete. DECISION 2 pending.
 | #   | Decision                          | Status                                |
 | --- | --------------------------------- | ------------------------------------- |
 | 1   | Stack                             | ✅ Python FastAPI + React TypeScript  |
-| 2   | Storage                           | Pending                               |
+| 2   | Storage                           | ✅ SQLite (raw sqlite3, no ORM)        |
 | 3   | Pipeline State Model              | Pending                               |
 | 4   | Duplicate Execution / Concurrency | Pending                               |
 | 5   | Gemini Integration                | Pending (requires DECISION 2–4 first) |
