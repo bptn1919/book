@@ -170,11 +170,15 @@ def test_portraits_step_sets_portrait_paths():
     with TestClient(app) as client:
         pid = _setup(client)
         c1, c2 = _advance_to_characters_generated(client, pid)
-        fake = {
-            "portraits": [(c1, "portrait_0.png"), (c2, "portrait_1.png")],
-            "image_chain_last_id": "img-chain-1",
-        }
-        with patch("app.pipeline._run_portraits_sync", return_value=fake):
+
+        # Simulate the real sync function: write each portrait to DB incrementally
+        def fake_portraits_sync(project_id, art_style, project_title, characters):
+            with models.get_db() as conn:
+                conn.execute("UPDATE characters SET portrait_path='portrait_0.png' WHERE id=?", (c1,))
+                conn.execute("UPDATE characters SET portrait_path='portrait_1.png' WHERE id=?", (c2,))
+            return {"image_chain_last_id": "img-chain-1"}
+
+        with patch("app.pipeline._run_portraits_sync", side_effect=fake_portraits_sync):
             r = client.post(f"/api/projects/{pid}/portraits")
             assert r.status_code == 200
             project = client.get(f"/api/projects/{pid}").json()
@@ -188,11 +192,7 @@ def test_portraits_step_stores_image_chain_id():
     with TestClient(app) as client:
         pid = _setup(client)
         c1, c2 = _advance_to_characters_generated(client, pid)
-        fake = {
-            "portraits": [(c1, "portrait_0.png"), (c2, "portrait_1.png")],
-            "image_chain_last_id": "img-chain-1",
-        }
-        with patch("app.pipeline._run_portraits_sync", return_value=fake):
+        with patch("app.pipeline._run_portraits_sync", return_value={"image_chain_last_id": "img-chain-1"}):
             client.post(f"/api/projects/{pid}/portraits")
     with models.get_db() as conn:
         row = conn.execute(

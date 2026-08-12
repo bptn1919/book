@@ -8,16 +8,21 @@ from unittest.mock import patch
 import pytest
 from fastapi.testclient import TestClient
 
+from app import models
 from app.main import app
 
 BOOK = ("book.txt", b"The Mole had been working very hard all the morning...", "text/plain")
 
 
 def _fake_portraits(project_id, art_style, project_title, characters):
-    return {
-        "portraits": [(c["id"], f"portrait_{i}.png") for i, c in enumerate(characters)],
-        "image_chain_last_id": "img-chain-after-portraits",
-    }
+    # Simulate the real sync function: write each portrait to DB immediately
+    with models.get_db() as conn:
+        for i, c in enumerate(characters):
+            conn.execute(
+                "UPDATE characters SET portrait_path=? WHERE id=?",
+                (f"portrait_{i}.png", c["id"]),
+            )
+    return {"image_chain_last_id": "img-chain-after-portraits"}
 
 
 def _fake_illustrations(project_id, image_chain_last_id, chapters):

@@ -12,7 +12,7 @@ The claim/complete/fail cycle is the most critical server-side logic: it is what
 
 **test_auth.py — session lifecycle (6 tests)**
 
-Register creates a user and sets the cookie. Login finds an existing user. Duplicate name returns 409. Logout deletes the session. Unauthenticated requests return 401.
+Register creates a user and sets the cookie. Login finds an existing user by email. Duplicate email returns 409. Logout deletes the session. Unauthenticated requests return 401.
 
 **test_projects.py — CRUD and authorization (8 tests)**
 
@@ -42,7 +42,7 @@ Chains all 5 steps from CREATED to DONE in a single test, asserting status, step
 
 ### Frontend — Vitest + @testing-library/react
 
-Tests live in `frontend/src/**/*.test.tsx`. Three test files, 14 tests total.
+Tests live in `frontend/src/**/*.test.tsx`. Three test files, 15 tests total.
 
 **Stepper.test.tsx (4 tests)**
 
@@ -52,9 +52,9 @@ The stepper drives which step shows as current, which as done (dark), and which 
 
 The card is the primary way users see generated content. Cases: name and prompt render; pending placeholder shown when no image; img tag with correct src when imageSrc provided; Generating spinner when generating=true; prompt truncated at 120 characters.
 
-**IdentityPage.test.tsx (5 tests)**
+**IdentityPage.test.tsx (6 tests)**
 
-The identity screen is the app's entry point — broken auth blocks everything. Cases: form renders; empty-name validation without calling the API; successful login fires onAuth; 404 from login triggers register fallback; generic error shows message. The API module is fully mocked with `vi.mock` so no real HTTP goes out.
+The identity screen is the app's entry point — broken auth blocks everything. Cases: email and name inputs render; empty-email validation without calling the API; successful login by email fires onAuth; 404 from login with empty name shows "no account found" prompt without calling register; 404 from login with name provided calls register(name, email); generic error shows message. The API module is fully mocked with `vi.mock` so no real HTTP goes out.
 
 ### What we deliberately do not test on the frontend
 
@@ -80,7 +80,7 @@ cd frontend && npm test
 
 ## Real test report
 
-Produced on 2026-08-12, Python 3.12.8, Node 20, pytest 9.1.1, Vitest 3.2.7.
+Produced on 2026-08-13, Python 3.12.8, Node 20, pytest 9.1.1, Vitest 3.2.7.
 
 
 ### Backend — 53 passed
@@ -94,9 +94,9 @@ collected 53 items
 tests/test_api.py::test_health PASSED                                    [  1%]
 tests/test_api.py::test_startup_cleanup PASSED                           [  3%]
 tests/test_auth.py::test_register_creates_user_and_sets_session PASSED   [  5%]
-tests/test_auth.py::test_register_duplicate_name_returns_409 PASSED      [  7%]
-tests/test_auth.py::test_login_finds_existing_user PASSED                [  9%]
-tests/test_auth.py::test_login_unknown_name_returns_404 PASSED           [ 11%]
+tests/test_auth.py::test_register_duplicate_email_returns_409 PASSED     [  7%]
+tests/test_auth.py::test_login_finds_existing_user_by_email PASSED       [  9%]
+tests/test_auth.py::test_login_unknown_email_returns_404 PASSED          [ 11%]
 tests/test_auth.py::test_logout_invalidates_session PASSED               [ 13%]
 tests/test_auth.py::test_me_without_session_returns_401 PASSED           [ 15%]
 tests/test_pipeline.py::test_complete_step_sets_next_status_and_resets_state PASSED [ 17%]
@@ -145,22 +145,22 @@ tests/test_steps.py::test_style_step_404_unknown_project PASSED          [ 98%]
 tests/test_integration.py::test_happy_path_all_five_steps PASSED         [ 99%]
 tests/test_integration.py::test_no_duplicate_call_on_second_request PASSED [100%]
 
-============================== 53 passed in 2.81s ==============================
+============================== 53 passed in 5.09s ==============================
 ```
 
-### Frontend — 14 passed
+### Frontend — 15 passed
 
 ```
  RUN  v3.2.7
 
- ✓ src/components/Stepper.test.tsx (4 tests) 69ms
- ✓ src/components/EntityCard.test.tsx (5 tests) 151ms
- ✓ src/pages/IdentityPage.test.tsx (5 tests) 742ms
+ ✓ src/components/Stepper.test.tsx (4 tests) 62ms
+ ✓ src/components/EntityCard.test.tsx (5 tests) 148ms
+ ✓ src/pages/IdentityPage.test.tsx (6 tests) 1411ms
 
  Test Files  3 passed (3)
-       Tests  14 passed (14)
-    Start at  22:40:10
-    Duration  3.21s
+       Tests  15 passed (15)
+    Start at  02:35:41
+    Duration  29.72s
 ```
 
-**Grand total: 67 tests, 0 failures.**
+**Grand total: 68 tests, 0 failures.**

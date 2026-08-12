@@ -15,46 +15,59 @@ const mockRegister = api.register as ReturnType<typeof vi.fn>
 describe('IdentityPage', () => {
   beforeEach(() => { vi.clearAllMocks() })
 
-  it('renders the name input and submit button', () => {
+  it('renders email and name inputs with a submit button', () => {
     render(<IdentityPage onAuth={() => {}} />)
+    expect(screen.getByLabelText(/email/i)).toBeInTheDocument()
     expect(screen.getByLabelText(/name/i)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /continue/i })).toBeInTheDocument()
   })
 
-  it('shows validation error when submitting empty name', async () => {
+  it('shows validation error when submitting empty email', async () => {
     render(<IdentityPage onAuth={() => {}} />)
     await userEvent.click(screen.getByRole('button', { name: /continue/i }))
-    expect(screen.getByText(/name is required/i)).toBeInTheDocument()
+    expect(screen.getByText(/email is required/i)).toBeInTheDocument()
     expect(mockLogin).not.toHaveBeenCalled()
   })
 
-  it('calls login and fires onAuth on success', async () => {
-    const user = { id: 'u1', name: 'Alice' }
+  it('calls login with email and fires onAuth on success', async () => {
+    const user = { id: 'u1', name: 'Alice', email: 'alice@example.com' }
     mockLogin.mockResolvedValue(user)
     const onAuth = vi.fn()
     render(<IdentityPage onAuth={onAuth} />)
-    await userEvent.type(screen.getByLabelText(/name/i), 'Alice')
+    await userEvent.type(screen.getByLabelText(/email/i), 'alice@example.com')
     await userEvent.click(screen.getByRole('button', { name: /continue/i }))
     await waitFor(() => expect(onAuth).toHaveBeenCalledWith(user))
+    expect(mockLogin).toHaveBeenCalledWith('alice@example.com')
   })
 
-  it('falls back to register when login returns 404', async () => {
+  it('prompts to enter name when login returns 404 and name is empty', async () => {
     const err = Object.assign(new Error('Not found'), { status: 404 })
     mockLogin.mockRejectedValue(err)
-    const user = { id: 'u2', name: 'Bob' }
+    render(<IdentityPage onAuth={() => {}} />)
+    await userEvent.type(screen.getByLabelText(/email/i), 'new@example.com')
+    await userEvent.click(screen.getByRole('button', { name: /continue/i }))
+    await waitFor(() => expect(screen.getByText(/no account found/i)).toBeInTheDocument())
+    expect(mockRegister).not.toHaveBeenCalled()
+  })
+
+  it('calls register with name and email when login returns 404 and name is provided', async () => {
+    const err = Object.assign(new Error('Not found'), { status: 404 })
+    mockLogin.mockRejectedValue(err)
+    const user = { id: 'u2', name: 'Bob', email: 'bob@example.com' }
     mockRegister.mockResolvedValue(user)
     const onAuth = vi.fn()
     render(<IdentityPage onAuth={onAuth} />)
+    await userEvent.type(screen.getByLabelText(/email/i), 'bob@example.com')
     await userEvent.type(screen.getByLabelText(/name/i), 'Bob')
     await userEvent.click(screen.getByRole('button', { name: /continue/i }))
     await waitFor(() => expect(onAuth).toHaveBeenCalledWith(user))
-    expect(mockRegister).toHaveBeenCalledWith('Bob')
+    expect(mockRegister).toHaveBeenCalledWith('Bob', 'bob@example.com')
   })
 
-  it('shows error message when both login and register fail', async () => {
+  it('shows generic error when login fails with a non-404 error', async () => {
     mockLogin.mockRejectedValue(new Error('Server error'))
     render(<IdentityPage onAuth={() => {}} />)
-    await userEvent.type(screen.getByLabelText(/name/i), 'Alice')
+    await userEvent.type(screen.getByLabelText(/email/i), 'alice@example.com')
     await userEvent.click(screen.getByRole('button', { name: /continue/i }))
     await waitFor(() => expect(screen.getByText(/something went wrong/i)).toBeInTheDocument())
   })

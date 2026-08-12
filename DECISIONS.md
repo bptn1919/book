@@ -30,6 +30,23 @@ Claude proposed using a SQLite transaction with a SELECT → check → UPDATE to
 
 Claude proposed using `interaction.output_image` for simpler image extraction. I rejected it because the reference notebook has a TODO around that field and the working implementation extracts images through `interaction.steps`. I chose to follow the verified path rather than introduce an unverified API dependency. I also kept the book upload and interaction chaining from the reference pipeline: the book is uploaded once, its URI is persisted, and subsequent steps continue the existing interaction chain. Cost: slightly more verbose integration code and an explicit fallback for potentially stale File API references.
 
+## 6. Auth: email-based identity (no password)
+
+The spec requires the app to know who the user is but does not specify an auth mechanism. I chose email-only identity: the user enters their email, the server looks up their account; if none exists, they also provide a name and the account is created. No password, no OAuth token, no magic link — just an email lookup backed by a session cookie.
+
+I considered name-only identity (simpler) but rejected it because names are not unique and the spec implies accounts should be persistent and identifiable. Email is unique per user and familiar enough that users will not be surprised to be asked for it. The session cookie (httponly, samesite=lax) makes subsequent requests authenticated without the frontend needing to manage tokens.
+
+Cost: users must remember which email they signed up with. This is acceptable for a demo and matches how most passwordless systems (e.g., magic-link) work.
+
+## 7. Gemini model IDs
+
+As required by §5.3 of the spec, the model IDs chosen are documented here:
+
+- **Text chain** (`TEXT_MODEL`): `gemini-3.6-flash` — used for book ingestion, style acknowledgement, character extraction, and chapter prompt generation. Chosen because it matches the reference notebook's `GEMINI_MODEL_ID`.
+- **Image chain** (`IMAGE_MODEL`): `gemini-2.5-flash-image` — used for portrait and illustration generation. The reference notebook listed `gemini-3.1-flash-lite-image`; during development the linter flagged this as an unrecognised model and substituted `gemini-2.5-flash-image`, which is a known production model supporting image output. The substitution was accepted.
+
+Both constants are defined at the top of `backend/app/pipeline.py`.
+
 ## If you had one more day, what would you build next and why?
 
 Real-time step updates via Server-Sent Events (SSE) instead of polling.

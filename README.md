@@ -36,7 +36,7 @@ The script loads `.env`, starts the FastAPI backend with `--reload`, and starts 
 ./test.sh
 ```
 
-Runs 51 backend tests (pytest) and 14 frontend tests (Vitest). No Gemini API key needed — all Gemini calls are mocked.
+Runs 53 backend tests (pytest) and 15 frontend tests (Vitest). No Gemini API key needed — all Gemini calls are mocked.
 
 ---
 
@@ -67,11 +67,11 @@ backend/
   app/
     main.py        FastAPI app, lifespan (init_db + crash cleanup)
     models.py      SQLite schema, init_db(), get_db() context manager
-    auth.py        Cookie-based name-only session auth
+    auth.py        Cookie-based email session auth (login by email; register with name + email)
     pipeline.py    Gemini integration: claim_step, run_*, _run_*_sync
     projects.py    REST router: CRUD + pipeline step routes + image serving
     storage.py     Local filesystem: book files, base64-decoded images
-  tests/           51 pytest tests, all Gemini calls mocked
+  tests/           53 pytest tests, all Gemini calls mocked
 
 data/              SQLite database (created on first start)
 storage/           Book text and generated images, per project

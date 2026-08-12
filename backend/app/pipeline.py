@@ -1,10 +1,13 @@
 import asyncio
+import logging
 import os
 import sqlite3
 import uuid
 from datetime import datetime, timedelta, timezone
 
 from fastapi import HTTPException
+
+logger = logging.getLogger(__name__)
 
 from . import storage
 from .models import get_db
@@ -122,8 +125,7 @@ async def run_style(project_id: str, art_style: str, existing_book_uri: str | No
     except Exception as e:
         with get_db() as conn:
             fail_step(conn, project_id)
-        import logging
-        logging.error(f"Style step failed for {project_id}: {type(e).__name__}: {e}")
+        logger.error("style step failed for %s: %s: %s", project_id, type(e).__name__, e)
         raise
 
 
@@ -189,9 +191,10 @@ async def run_characters(project_id: str, text_chain_last_id: str) -> None:
                 (result["text_chain_last_id"], project_id),
             )
             complete_step(conn, project_id, "CHARACTERS_GENERATED")
-    except Exception:
+    except Exception as e:
         with get_db() as conn:
             fail_step(conn, project_id)
+        logger.error("characters step failed for %s: %s: %s", project_id, type(e).__name__, e)
         raise
 
 
@@ -236,19 +239,15 @@ async def run_portraits(
             None, _run_portraits_sync, project_id, art_style, project_title, characters
         )
         with get_db() as conn:
-            for char_id, filename in result["portraits"]:
-                conn.execute(
-                    "UPDATE characters SET portrait_path=? WHERE id=?",
-                    (filename, char_id),
-                )
             conn.execute(
                 "UPDATE projects SET image_chain_last_id=? WHERE id=?",
                 (result["image_chain_last_id"], project_id),
             )
             complete_step(conn, project_id, "PORTRAITS_GENERATED")
-    except Exception:
+    except Exception as e:
         with get_db() as conn:
             fail_step(conn, project_id)
+        logger.error("portraits step failed for %s: %s: %s", project_id, type(e).__name__, e)
         raise
 
 
@@ -270,7 +269,6 @@ def _run_portraits_sync(
         ),
     )
 
-    portraits = []
     for i, char in enumerate(characters[:MAX_CHARACTERS]):
         image_interaction = client.interactions.create(
             model=IMAGE_MODEL,
@@ -284,14 +282,16 @@ def _run_portraits_sync(
                         ext = content.mime_type.split("/")[-1]
                         filename = f"portrait_{i}.{ext}"
                         storage.save_image(project_id, filename, content.data)
-                        portraits.append((char["id"], filename))
+                        # Write each portrait to DB immediately so polling sees them land one by one
+                        with get_db() as conn:
+                            conn.execute(
+                                "UPDATE characters SET portrait_path=? WHERE id=?",
+                                (filename, char["id"]),
+                            )
                         break
                 break
 
-    return {
-        "portraits": portraits,
-        "image_chain_last_id": image_interaction.id,
-    }
+    return {"image_chain_last_id": image_interaction.id}
 
 
 # ── Chapters step ─────────────────────────────────────────────────────────────
@@ -316,9 +316,10 @@ async def run_chapters(project_id: str, text_chain_last_id: str) -> None:
                 (result["text_chain_last_id"], project_id),
             )
             complete_step(conn, project_id, "CHAPTERS_GENERATED")
-    except Exception:
+    except Exception as e:
         with get_db() as conn:
             fail_step(conn, project_id)
+        logger.error("chapters step failed for %s: %s: %s", project_id, type(e).__name__, e)
         raise
 
 
@@ -375,9 +376,10 @@ async def run_illustrations(
                 (result["image_chain_last_id"], project_id),
             )
             complete_step(conn, project_id, "DONE")
-    except Exception:
+    except Exception as e:
         with get_db() as conn:
             fail_step(conn, project_id)
+        logger.error("illustrations step failed for %s: %s: %s", project_id, type(e).__name__, e)
         raise
 
 
