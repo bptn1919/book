@@ -6,7 +6,7 @@ BOOK = ("book.txt", b"Once upon a time...", "text/plain")
 
 
 def _register(client: TestClient, name: str = "Alice") -> None:
-    client.post("/api/auth/register", json={"name": name})
+    client.post("/api/auth/register", json={"name": name, "email": f"{name.lower()}@example.com"})
 
 
 def test_list_projects_empty():

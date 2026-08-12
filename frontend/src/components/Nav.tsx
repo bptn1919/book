@@ -1,5 +1,5 @@
 interface Props {
-  user: { id: string; name: string }
+  user: { id: string; name: string; email: string }
   onLogout: () => void
 }
 

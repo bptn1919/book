@@ -18,7 +18,7 @@ def test_startup_cleanup(monkeypatch):
 
     with models.get_db() as conn:
         conn.execute(
-            "INSERT INTO users VALUES ('u1','Test','2026-01-01')"
+            "INSERT INTO users VALUES ('u1','Test','test@example.com','2026-01-01')"
         )
         conn.execute(
             "INSERT INTO projects"

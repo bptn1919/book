@@ -53,19 +53,19 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
 // ── Auth ──────────────────────────────────────────────────────────────────────
 
-export function register(name: string) {
-  return request<{ id: string; name: string }>('/api/auth/register', {
+export function register(name: string, email: string) {
+  return request<{ id: string; name: string; email: string }>('/api/auth/register', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name }),
+    body: JSON.stringify({ name, email }),
   })
 }
 
-export function login(name: string) {
-  return request<{ id: string; name: string }>('/api/auth/login', {
+export function login(email: string) {
+  return request<{ id: string; name: string; email: string }>('/api/auth/login', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name }),
+    body: JSON.stringify({ email }),
   })
 }
 
@@ -74,7 +74,7 @@ export function logout() {
 }
 
 export function getMe() {
-  return request<{ id: string; name: string }>('/api/auth/me')
+  return request<{ id: string; name: string; email: string }>('/api/auth/me')
 }
 
 // ── Projects ──────────────────────────────────────────────────────────────────

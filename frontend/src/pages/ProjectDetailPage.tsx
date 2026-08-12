@@ -12,7 +12,7 @@ const POLL_INTERVAL = 3000
 
 interface Props {
   projectId: string
-  user: { id: string; name: string }
+  user: { id: string; name: string; email: string }
   onBack: () => void
   onLogout: () => void
 }

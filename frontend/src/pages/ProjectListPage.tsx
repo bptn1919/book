@@ -31,7 +31,7 @@ function pillClass(s: ProjectStatus) {
 }
 
 interface Props {
-  user: { id: string; name: string }
+  user: { id: string; name: string; email: string }
   onNew: () => void
   onOpen: (id: string) => void
   onLogout: () => void

@@ -17,7 +17,7 @@ FAKE_STYLE = {
 
 
 def _setup(client: TestClient, name: str = "Alice") -> str:
-    client.post("/api/auth/register", json={"name": name})
+    client.post("/api/auth/register", json={"name": name, "email": f"{name.lower()}@example.com"})
     return client.post(
         "/api/projects", data={"title": "Book"}, files={"book": BOOK}
     ).json()["id"]
@@ -345,6 +345,6 @@ def test_style_step_requires_auth():
 
 def test_style_step_404_unknown_project():
     with TestClient(app) as client:
-        client.post("/api/auth/register", json={"name": "Alice"})
+        client.post("/api/auth/register", json={"name": "Alice", "email": "alice@example.com"})
         r = client.post("/api/projects/no-such-id/style", json={"art_style": "watercolor"})
     assert r.status_code == 404

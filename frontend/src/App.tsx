@@ -11,7 +11,7 @@ export type Route =
   | { page: 'new' }
   | { page: 'detail'; id: string }
 
-interface User { id: string; name: string }
+interface User { id: string; name: string; email: string }
 
 export default function App() {
   const [user, setUser] = useState<User | null | undefined>(undefined)

@@ -56,7 +56,7 @@ def _all_mocks():
 
 def test_happy_path_all_five_steps(_all_mocks):
     with TestClient(app) as client:
-        client.post("/api/auth/register", json={"name": "Alice"})
+        client.post("/api/auth/register", json={"name": "Alice", "email": "alice@example.com"})
 
         pid = client.post(
             "/api/projects",
@@ -106,7 +106,7 @@ def test_no_duplicate_call_on_second_request(_all_mocks):
         return original_run_style_sync(*args, **kwargs)
 
     with TestClient(app) as client:
-        client.post("/api/auth/register", json={"name": "Bob"})
+        client.post("/api/auth/register", json={"name": "Bob", "email": "bob@example.com"})
         pid = client.post(
             "/api/projects",
             data={"title": "Test"},

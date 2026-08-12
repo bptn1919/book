@@ -62,7 +62,7 @@ def test_is_stuck_false_when_failed():
 def _seed(status: str = "CREATED", step_state: str = "IDLE", step_started_at: str | None = None) -> None:
     models.init_db()
     with models.get_db() as conn:
-        conn.execute("INSERT INTO users VALUES ('u1','Test','2026-01-01')")
+        conn.execute("INSERT INTO users VALUES ('u1','Test','test@example.com','2026-01-01')")
         conn.execute(
             "INSERT INTO projects (id,user_id,title,status,step_state,step_started_at,created_at) "
             "VALUES ('p1','u1','Book',?,?,?,'2026-01-01')",
