@@ -96,6 +96,58 @@ def test_style_step_409_wrong_status():
     assert r.status_code == 409
 
 
+# ── Characters step ────────────────────────────────────────────────────────────
+
+FAKE_CHARACTERS = {
+    "characters": [
+        {"name": "Mole", "prompt": "A small, velvety black mole with tiny pink hands..."},
+        {"name": "Rat", "prompt": "A water rat with sleek brown fur and bright eyes..."},
+        {"name": "Extra", "prompt": "Should be dropped — cap is 2"},
+    ],
+    "text_chain_last_id": "interaction-chars-1",
+}
+
+
+def _advance_to_style_set(client: TestClient, pid: str) -> None:
+    with models.get_db() as conn:
+        conn.execute(
+            "UPDATE projects SET status='STYLE_SET', text_chain_last_id='chain-1' WHERE id=?",
+            (pid,),
+        )
+
+
+def test_characters_step_stores_up_to_two_characters():
+    with patch("app.pipeline._run_characters_sync", return_value=FAKE_CHARACTERS):
+        with TestClient(app) as client:
+            pid = _setup(client)
+            _advance_to_style_set(client, pid)
+            r = client.post(f"/api/projects/{pid}/characters")
+            assert r.status_code == 200
+            project = client.get(f"/api/projects/{pid}").json()
+    assert project["status"] == "CHARACTERS_GENERATED"
+    assert len(project["characters"]) == 2
+    assert project["characters"][0]["name"] == "Mole"
+
+
+def test_characters_step_fails_on_gemini_error():
+    with patch("app.pipeline._run_characters_sync", side_effect=RuntimeError("timeout")):
+        with TestClient(app, raise_server_exceptions=False) as client:
+            pid = _setup(client)
+            _advance_to_style_set(client, pid)
+            r = client.post(f"/api/projects/{pid}/characters")
+            assert r.status_code == 500
+            project = client.get(f"/api/projects/{pid}").json()
+    assert project["step_state"] == "FAILED"
+    assert project["status"] == "STYLE_SET"
+
+
+def test_characters_step_409_wrong_status():
+    with TestClient(app) as client:
+        pid = _setup(client)  # status=CREATED, not STYLE_SET
+        r = client.post(f"/api/projects/{pid}/characters")
+    assert r.status_code == 409
+
+
 def test_style_step_requires_auth():
     with TestClient(app) as client:
         r = client.post("/api/projects/fake/style", json={"art_style": "watercolor"})

@@ -162,3 +162,59 @@ def _run_style_sync(project_id: str, art_style: str, existing_book_uri: str | No
         "text_chain_last_id": style_interaction.id,
         "art_style": final_style,
     }
+
+
+# ── Characters step ────────────────────────────────────────────────────────────
+
+MAX_CHARACTERS = 2
+
+
+async def run_characters(project_id: str, text_chain_last_id: str) -> None:
+    claim_step(project_id, "STYLE_SET")
+    try:
+        result = await asyncio.get_running_loop().run_in_executor(
+            None, _run_characters_sync, project_id, text_chain_last_id
+        )
+    except Exception:
+        with get_db() as conn:
+            fail_step(conn, project_id)
+        raise
+    with get_db() as conn:
+        for char in result["characters"][:MAX_CHARACTERS]:
+            import uuid as _uuid
+            conn.execute(
+                "INSERT INTO characters (id,project_id,name,prompt) VALUES (?,?,?,?)",
+                (_uuid.uuid4().hex, project_id, char["name"], char["prompt"]),
+            )
+        conn.execute(
+            "UPDATE projects SET text_chain_last_id=? WHERE id=?",
+            (result["text_chain_last_id"], project_id),
+        )
+        complete_step(conn, project_id, "CHARACTERS_GENERATED")
+
+
+def _run_characters_sync(project_id: str, text_chain_last_id: str) -> dict:
+    import json
+
+    client = _get_client()
+    from pydantic import BaseModel
+
+    class Prompt(BaseModel):
+        name: str
+        prompt: str
+
+    interaction = client.interactions.create(
+        model=TEXT_MODEL,
+        input="Can you describe the main characters (only the adults) and prepare a prompt describing them with as much details as possible (use the descriptions from the book) so Nano Banana can generate images of them? Each prompt should be at least 50 words.",
+        previous_interaction_id=text_chain_last_id,
+        response_format={
+            "type": "text",
+            "mime_type": "application/json",
+            "schema": {"type": "array", "items": Prompt.model_json_schema()},
+        },
+    )
+    characters = json.loads(interaction.output_text)[:MAX_CHARACTERS]
+    return {
+        "characters": characters,
+        "text_chain_last_id": interaction.id,
+    }

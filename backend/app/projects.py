@@ -88,3 +88,16 @@ async def run_style_step(project_id: str, body: StyleIn, user: CurrentUser):
         raise HTTPException(404, "Project not found")
     await pipeline.run_style(project_id, body.art_style, row["book_uri"])
     return {"ok": True}
+
+
+@router.post("/{project_id}/characters")
+async def run_characters_step(project_id: str, user: CurrentUser):
+    with get_db() as conn:
+        row = conn.execute(
+            "SELECT text_chain_last_id FROM projects WHERE id=? AND user_id=?",
+            (project_id, user["id"]),
+        ).fetchone()
+    if not row:
+        raise HTTPException(404, "Project not found")
+    await pipeline.run_characters(project_id, row["text_chain_last_id"])
+    return {"ok": True}
