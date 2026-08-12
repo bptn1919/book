@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   getProject, runStyle, runCharacters, runPortraits, runChapters,
-  runIllustrations, logout, imageUrl, type Project, type ProjectStatus,
+  runIllustrations, logout, imageUrl, type Project,
 } from '../api'
 import { Nav } from '../components/Nav'
 import { Stepper } from '../components/Stepper'
@@ -17,9 +17,6 @@ interface Props {
   onLogout: () => void
 }
 
-function isTerminal(status: ProjectStatus, stepState: string) {
-  return status === 'DONE' || stepState === 'IDLE'
-}
 
 export function ProjectDetailPage({ projectId, user, onBack, onLogout }: Props) {
   const [project, setProject] = useState<Project | null>(null)
@@ -58,25 +55,14 @@ export function ProjectDetailPage({ projectId, user, onBack, onLogout }: Props) 
     setStepErr('')
     try {
       await fn()
-      await load()
-      // Start polling
-      const poll = async () => {
-        const p = await load()
-        if (p && p.step_state === 'RUNNING') {
-          pollRef.current = setTimeout(poll, POLL_INTERVAL)
-        }
-      }
-      pollRef.current = setTimeout(poll, POLL_INTERVAL)
     } catch (err: unknown) {
       const e = err as { status?: number; message?: string }
-      if (e.status === 409) {
-        // Already running — start polling
-        await load()
-      } else {
+      if (e.status !== 409) {
         setStepErr(e.message ?? 'Something went wrong. Please try again.')
-        await load()
       }
+      // 409 = already running — fall through to load() so polling starts
     }
+    await load()  // always reload; useEffect picks up RUNNING and starts polling
   }
 
   async function handleLogout() {
