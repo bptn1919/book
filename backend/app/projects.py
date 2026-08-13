@@ -163,6 +163,20 @@ async def run_illustrations_step(project_id: str, user: CurrentUser):
     return {"ok": True}
 
 
+@router.get("/{project_id}/book")
+def get_book(project_id: str, user: CurrentUser):
+    with get_db() as conn:
+        if not conn.execute(
+            "SELECT 1 FROM projects WHERE id=? AND user_id=?",
+            (project_id, user["id"]),
+        ).fetchone():
+            raise HTTPException(404, "Project not found")
+    path = storage.book_path(project_id)
+    if not path.exists():
+        raise HTTPException(404, "Book not found")
+    return FileResponse(str(path), media_type="text/plain")
+
+
 @router.get("/{project_id}/images/{filename}")
 def get_image(project_id: str, filename: str, user: CurrentUser):
     if re.search(r"[/\\]|\.\.", filename):
