@@ -90,22 +90,15 @@ def is_stuck(step_state: str, step_started_at: str | None) -> bool:
 
 def _get_client():
     from google import genai
-    from google.genai import types
 
     api_key = os.getenv("GEMINI_API_KEY")
     if not api_key:
         raise RuntimeError("GEMINI_API_KEY not set")
-    return genai.Client(
-        api_key=api_key,
-        http_options=types.HttpOptions(
-            retry_options=types.HttpRetryOptions(
-                attempts=5,
-                initial_delay=2.0,
-                max_delay=60.0,
-                http_status_codes=[429, 500, 502, 503, 504],
-            )
-        ),
-    )
+    # No retry_options: the SDK's default is a single attempt (no auto-retry).
+    # Per the assessment's cost-discipline rule, a Gemini call must never be
+    # retried automatically — on any failure (incl. 429/5xx) the step is
+    # marked FAILED and the user retries it explicitly via the UI.
+    return genai.Client(api_key=api_key)
 
 
 # ── Style step ─────────────────────────────────────────────────────────────────

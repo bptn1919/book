@@ -38,7 +38,7 @@ Chains all 5 steps from CREATED to DONE in a single test, asserting status, step
 
 - The real `_run_*_sync` functions that call the Gemini API — these are integration with an external paid service and are covered by running the notebook manually (per the assessment spec). Testing them with real calls would cost quota and require a secret in CI.
 - SQLite WAL mode internals — we trust the stdlib.
-- Retry logic inside `_get_client()` — the `HttpRetryOptions` config is declarative; the retry behavior is owned by the SDK.
+- Auto-retry absence — `_get_client()` intentionally omits `retry_options`, so the SDK's default (`stop_after_attempt(1)`) applies: one attempt per Gemini call, no automatic retry. This is a one-line config choice, not logic worth a dedicated test; it's covered by the fact that every failing `_run_*_sync` mock in `test_steps.py` results in exactly one call and a `FAILED` step_state.
 
 ### Frontend — Vitest + @testing-library/react
 
